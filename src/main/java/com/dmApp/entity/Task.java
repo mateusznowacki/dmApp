@@ -29,6 +29,13 @@ public class Task {
     public Task() {
     }
 
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
+    }
 
     public long getId() {
         return id;
