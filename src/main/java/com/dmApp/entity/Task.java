@@ -1,5 +1,6 @@
 package com.dmApp.entity;
 
+import com.dmApp.enums.TaskStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,8 @@ public class Task {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime finishedAt;
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
 
     public Task() {
     }
