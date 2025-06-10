@@ -1,5 +1,5 @@
 package com.dmApp.dto;
 
-public record LoginRequestDto(String username,
+public record LoginRequestDto(String email,
                               String password) {
 }
