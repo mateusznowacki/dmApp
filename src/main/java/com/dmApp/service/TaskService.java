@@ -31,11 +31,25 @@ public class TaskService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Zwraca aktualnie zalogowanego użytkownika. Jeżeli w Authentication#getName()
+     * znajduje się liczba, traktujemy ją jako ID; w innym przypadku – jako adres e-mail.
+     */
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getName();
-        return userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No authentication found");
+        }
+
+        String principal = authentication.getName();
+        try {
+            Long userId = Long.parseLong(principal);
+            return userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        } catch (NumberFormatException ignored) {
+            return userRepository.findByEmail(principal)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        }
     }
 
     private void checkOwnership(Task task, User currentUser) {
@@ -47,7 +61,6 @@ public class TaskService {
     private TaskResponseDto mapToResponseDto(Task task) {
         return new TaskResponseDto(
                 task.getId(),
-                task.getUser().getId(),
                 task.getTitle(),
                 task.getDescription(),
                 task.isCompleted(),
@@ -60,17 +73,10 @@ public class TaskService {
 
     @Transactional
     public ResponseEntity<TaskResponseDto> createNewTask(CreateTaskRequestDto request) {
-
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
         User currentUser = getCurrentUser();
-        if (user.getId() != (currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only create tasks for yourself");
-        }
 
         Task task = new Task();
-        task.setUser(user);
+        task.setUser(currentUser);
         task.setTitle(request.title());
         task.setDescription(request.description());
         task.setCompleted(false);
@@ -80,7 +86,6 @@ public class TaskService {
         task.setStatus(TaskStatus.CREATED);
 
         Task savedTask = taskRepository.save(task);
-
         return ResponseEntity.ok(mapToResponseDto(savedTask));
     }
 
@@ -96,13 +101,10 @@ public class TaskService {
 
     public ResponseEntity<List<TaskResponseDto>> getAllUserTasks() {
         User currentUser = getCurrentUser();
-
         List<Task> userTasks = taskRepository.findByUserId(currentUser.getId());
-
         List<TaskResponseDto> taskDtos = userTasks.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(taskDtos);
     }
 
@@ -122,10 +124,8 @@ public class TaskService {
         task.setUpdatedAt(LocalDateTime.now());
 
         Task updatedTask = taskRepository.save(task);
-
         return ResponseEntity.ok(mapToResponseDto(updatedTask));
     }
-
 
     @Transactional
     public ResponseEntity<TaskResponseDto> updateTaskStatus(Long id, TaskStatus status) {
@@ -144,7 +144,6 @@ public class TaskService {
         }
 
         Task updatedTask = taskRepository.save(task);
-
         return ResponseEntity.ok(mapToResponseDto(updatedTask));
     }
 
@@ -157,7 +156,6 @@ public class TaskService {
         checkOwnership(task, currentUser);
 
         taskRepository.delete(task);
-
         return ResponseEntity.ok().build();
     }
 }
