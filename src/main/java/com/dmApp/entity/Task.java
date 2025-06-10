@@ -26,12 +26,6 @@ public class Task {
     public Task() {
     }
 
-    public Task(long userId) {
-        this.id = userId;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
 
     public long getId() {
         return id;
